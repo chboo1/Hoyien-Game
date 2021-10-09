@@ -2,6 +2,12 @@
 #include <SDL2/SDL.h>
 
 
+#define STAND 0
+#define MOVE 1
+#define JUMP 2
+#define FALL 3
+
+
 const int width = 1000;
 const int height = 1000;
 
@@ -21,10 +27,12 @@ class Main
     SDL_Rect groundRect = {0, height - height / 100, width, height / 100};
     SDL_Rect pRect;
     bool quit = false;
-    int hspeed = 0;
-    int vspeed = 0;
+    int cJumpLen = 0;
+    int state = 0;
+    int hdirection;
     bool aPressed = false;
     bool dPressed = false;
+    bool spPressed = false;
     Main()
     {
       if (!init() || !loadGraphics() || !initRects())
@@ -51,7 +59,7 @@ bool Main::init()
   }
   else
   {
-    window = SDL_CreateWindow("Hoyien Game :)", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
+    window = SDL_CreateWindow("Hoyien Game :)", 0, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
     if (window == NULL)
     {
       success = false;
@@ -108,6 +116,9 @@ void Main::gameloop()
         case SDLK_d:
           dPressed = true;
           break;
+        case SDLK_SPACE:
+          spPressed = true;
+          break;
       }
     }
     else if (e.type == SDL_KEYUP)
@@ -120,43 +131,63 @@ void Main::gameloop()
         case SDLK_d:
           dPressed = false;
           break;
+        case SDLK_SPACE:
+          spPressed = false;
+          break;
       }
     }
   }
+  hdirection = 0;
   if (dPressed)
   {
-    if (hspeed < 5)
-    {
-      hspeed++;
-    }
-    if (aPressed)
-    {
-      hspeed = 0;
-    }
+    hdirection++;
+    state = MOVE;
   }
   if (aPressed)
   {
-    if (hspeed > -5)
-    {
-      hspeed--;
-    }
-    if (dPressed)
-    {
-      hspeed = 0;
-    }
+    hdirection--;
+    state = MOVE;
   }
-  if (!dPressed && !aPressed)
+  if (spPressed)
   {
-    if (hspeed < 0)
+    state = JUMP;
+  }
+  else if (pRect.y < height - (height / 100) - (height / 20))
+  {
+    state = FALL;
+  }
+
+
+  if (state == MOVE)
+  {
+    pRect.x += 20 * hdirection;
+  }
+  if (state == JUMP)
+  {
+    cJumpLen++;
+    if (cJumpLen >= 15)
     {
-      hspeed++;
+      state = FALL;
     }
-    if (hspeed > 0)
+    else
     {
-      hspeed--;
+      pRect.y -= 20;
+      pRect.x += 20 * hdirection;
     }
   }
-  pRect.x += hspeed;
+  if (state == FALL)
+  {
+    pRect.y += 20;
+    pRect.x += 20 * hdirection;
+    if (pRect.y >= height - (height / 100) - (height / 20))
+    {
+      pRect.y = height - (height / 100) - (height / 20);
+      state = STAND;
+      std::cout << state << std::endl;
+      cJumpLen = 0;
+    }
+  }
+  std::cout << state << std::endl;
   SDL_FillRect(screenSurface, NULL, SDL_MapRGB(screenSurface->format, 0xFF, 0xFF, 0xFF));
   SDL_FillRect(screenSurface, &groundRect, SDL_MapRGB(screenSurface->format,  0xA5, 0x4A, 0x2A));
   SDL_BlitSurface(p, NULL, screenSurface, &pRect);
